@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#011a3d">
+<title>DIVE COMPUTER COMPANION</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#011a3d; --bg2:#022a5e; --bg3:#023e8a;
+    --border:#0077b6; --cyan:#90e0ef; --green:#3dffa0;
+    --yellow:#ffd060; --red:#ff5a4a; --text:#caf0f8;
+    --dim:#90e0ef; --muted:#0077b6;
+    --amber:#e8914a; --ocean:#0077b6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Barlow Condensed',sans-serif;min-height:100vh;display:flex;flex-direction:column;}
+
+  /* Header */
+  .header{background:#010f24;border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;}
+  .logo{font-size:21px;font-weight:700;letter-spacing:2px;display:flex;align-items:baseline;gap:5px;}
+  .logo-dive{color:var(--text);font-weight:700;}
+  .logo-computer{color:var(--cyan);font-weight:700;font-size:17px;}
+  .logo-companion{color:var(--ocean);font-weight:400;font-size:14px;letter-spacing:1.5px;}
+
+  /* BLE bar */
+  .ble-bar{background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 24px;display:flex;align-items:center;gap:12px;}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--muted);flex-shrink:0;}
+  .dot.scanning{background:var(--yellow);animation:blink .7s infinite;}
+  .dot.connected{background:var(--green);box-shadow:0 0 10px var(--green);animation:blink 2s infinite;}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+  .ble-label{font-family:'Share Tech Mono',monospace;font-size:14px;color:var(--dim);flex:1;}
+
+  /* Tabs */
+  .tab-nav{display:flex;background:var(--bg2);border-bottom:2px solid var(--border);}
+  .tab-btn{flex:1;padding:14px 8px;font-family:'Share Tech Mono',monospace;font-size:13px;letter-spacing:2.5px;color:var(--dim);background:transparent;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer;transition:all .15s;text-transform:uppercase;}
+  .tab-btn:hover{color:var(--text);}
+  .tab-btn.active{color:var(--cyan);border-bottom-color:var(--cyan);}
+
+  /* Panels */
+  .tab-panel{display:none;flex-direction:column;align-items:center;padding:24px 18px 56px;gap:20px;max-width:480px;margin:0 auto;width:100%;}
+  .tab-panel.active{display:flex;}
+
+  /* Buttons */
+  .btn{padding:8px 20px;border-radius:4px;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;border:1px solid;transition:all .15s;}
+  .btn-cyan  {background:transparent;border-color:var(--cyan);  color:var(--cyan);}  .btn-cyan:hover  {background:var(--cyan);  color:var(--bg);}
+  .btn-yellow{background:transparent;border-color:var(--yellow);color:var(--yellow);}  .btn-yellow:hover{background:var(--yellow);color:var(--bg);}
+  .btn-green {background:transparent;border-color:var(--green); color:var(--green);}  .btn-green:hover {background:var(--green); color:var(--bg);}
+  .btn-red   {background:transparent;border-color:var(--red);   color:var(--red);}    .btn-red:hover   {background:var(--red);   color:var(--bg);}
+  .btn-dim   {background:transparent;border-color:var(--border);color:var(--dim);}    .btn-dim:hover   {border-color:var(--dim); color:var(--text);}
+  .btn:disabled{opacity:.3;cursor:not-allowed;pointer-events:none;}
+  .btn-block{width:100%;}
+
+  /* Cards */
+  .card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:18px 20px;width:100%;}
+  .card-title{font-family:'Share Tech Mono',monospace;font-size:13px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+
+  /* Sliders */
+  .slider-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .slider-label{font-size:15px;color:var(--dim);letter-spacing:1px;}
+  .slider-readout{font-family:'Share Tech Mono',monospace;font-size:16px;color:var(--cyan);}
+  input[type=range]{-webkit-appearance:none;width:100%;height:4px;background:var(--bg3);border-radius:2px;outline:none;cursor:pointer;border:1px solid var(--border);margin-bottom:4px;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:var(--cyan);box-shadow:0 0 14px rgba(144,224,239,.6);cursor:grab;transition:transform .1s;}
+  input[type=range]::-webkit-slider-thumb:active{transform:scale(1.2);cursor:grabbing;}
+  .tick-marks{display:flex;justify-content:space-between;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:14px;}
+
+  .status-bar{font-family:'Share Tech Mono',monospace;font-size:13px;letter-spacing:1px;color:var(--dim);text-align:center;min-height:18px;}
+  .status-bar.active{color:var(--yellow);}
+  .status-bar.sent  {color:var(--green);}
+
+  /* SIM */
+  .depth-display{text-align:center;}
+  .depth-label{font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:4px;color:var(--muted);margin-bottom:8px;}
+  .depth-value{font-family:'Share Tech Mono',monospace;font-size:96px;line-height:1;color:var(--cyan);text-shadow:0 0 30px rgba(144,224,239,.5);transition:color .3s;}
+  .depth-value.warning{color:var(--yellow);text-shadow:0 0 30px rgba(255,208,96,.4);}
+  .depth-value.danger {color:var(--red);   text-shadow:0 0 30px rgba(255,68,85,.4);}
+  .depth-unit{font-family:'Share Tech Mono',monospace;font-size:20px;color:var(--dim);letter-spacing:2px;margin-top:4px;}
+  .controls{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;width:100%;}
+
+  /* Recording pill */
+  .rec-pill{display:none;align-items:center;gap:8px;background:rgba(255,68,85,.1);border:1px solid var(--red);border-radius:20px;padding:6px 14px;font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--red);letter-spacing:1px;}
+  .rec-pill.active{display:flex;}
+  .rec-dot{width:7px;height:7px;border-radius:50%;background:var(--red);animation:blink .8s infinite;}
+
+  /* SETTINGS */
+  .gf-presets{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;margin-bottom:16px;}
+  .preset-btn{padding:4px 10px;border-radius:3px;font-family:'Share Tech Mono',monospace;font-size:11px;cursor:pointer;background:transparent;border:1px solid var(--border);color:var(--dim);transition:all .15s;}
+  .preset-btn:hover {border-color:var(--cyan);color:var(--cyan);}
+  .preset-btn.active{border-color:var(--cyan);color:var(--cyan);background:rgba(144,224,239,.1);}
+
+  .setting-row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--border);}
+  .setting-row:last-of-type{border-bottom:none;}
+  .setting-key{font-family:'Share Tech Mono',monospace;font-size:13px;letter-spacing:1px;color:var(--dim);}
+  .setting-val{font-family:'Share Tech Mono',monospace;font-size:14px;color:var(--text);}
+  .setting-val.ok  {color:var(--green);}
+  .setting-val.warn{color:var(--yellow);}
+
+  /* Inline setting rows */
+  .setting-inline{display:flex;align-items:center;gap:8px;}
+  .inline-input{background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:6px 12px;font-family:'Share Tech Mono',monospace;font-size:14px;color:var(--text);outline:none;transition:border-color .15s;width:110px;}
+  .inline-input:focus{border-color:var(--cyan);}
+  .inline-input::placeholder{color:var(--muted);}
+  .inline-time{width:96px;color-scheme:dark;}
+  .btn-inline{padding:6px 12px;border-radius:4px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--dim);transition:all .15s;white-space:nowrap;}
+  .btn-inline:hover{border-color:var(--cyan);color:var(--cyan);}
+  .btn-inline:disabled{opacity:.3;cursor:not-allowed;pointer-events:none;}
+
+  /* Debug log toggle */
+  .debug-toggle{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--dim);cursor:pointer;letter-spacing:1px;display:flex;align-items:center;gap:6px;padding:8px 0;}
+  .debug-toggle:hover{color:var(--text);}
+  .debug-log{display:none;flex-direction:column;gap:4px;max-height:200px;overflow-y:auto;margin-top:8px;}
+  .debug-log.open{display:flex;}
+  .debug-log::-webkit-scrollbar{width:3px;}
+  .debug-log::-webkit-scrollbar-thumb{background:var(--muted);border-radius:2px;}
+  .dbg-entry{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--dim);padding:3px 0;border-bottom:1px solid var(--border);}
+  .dbg-entry.ok  {color:var(--green);}
+  .dbg-entry.warn{color:var(--yellow);}
+  .dbg-entry.err {color:var(--red);}
+  .dbg-entry.info{color:var(--cyan);}
+
+  /* LOGS TAB */
+  .logs-header{display:flex;justify-content:space-between;align-items:center;width:100%;}
+  .logs-title {font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;}
+
+  .dive-list{display:flex;flex-direction:column;gap:10px;width:100%;}
+  .dive-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;cursor:pointer;transition:border-color .15s;}
+  .dive-card:hover{border-color:var(--cyan);}
+  .dive-card-top{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .dive-num{font-family:'Share Tech Mono',monospace;font-size:17px;color:var(--text);font-weight:700;}
+  .dive-badge{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1.5px;padding:2px 8px;border-radius:3px;}
+  .dive-badge.sim {background:rgba(255,208,96,.12);border:1px solid var(--yellow);color:var(--yellow);}
+  .dive-badge.live{background:rgba(0,255,157,.12);border:1px solid var(--green); color:var(--green);}
+  .dive-date{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);margin-left:auto;}
+  .dive-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  .dive-stat-cell{background:var(--bg3);border-radius:4px;padding:8px 10px;}
+  .dive-stat-label{font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:1.5px;color:var(--muted);margin-bottom:3px;}
+  .dive-stat-val  {font-family:'Share Tech Mono',monospace;font-size:18px;color:var(--cyan);}
+  .dive-stat-unit {font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--dim);}
+
+  .log-empty{font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--muted);text-align:center;padding:48px 0;letter-spacing:1px;}
+
+  /* Detail overlay */
+  .detail-overlay{position:fixed;inset:0;background:var(--bg);z-index:100;display:none;flex-direction:column;}
+  .detail-overlay.open{display:flex;}
+  .detail-header{background:#010f24;border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;gap:14px;}
+  .detail-back{font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--cyan);cursor:pointer;letter-spacing:1px;padding:4px 0;}
+  .detail-back:hover{text-decoration:underline;}
+  .detail-title{font-family:'Share Tech Mono',monospace;font-size:14px;color:var(--text);letter-spacing:2px;}
+  .detail-body{flex:1;overflow-y:auto;padding:20px 18px 40px;display:flex;flex-direction:column;gap:18px;max-width:480px;margin:0 auto;width:100%;}
+
+  .detail-stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .detail-stat{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:14px 16px;}
+  .detail-stat-label{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);margin-bottom:6px;}
+  .detail-stat-val  {font-family:'Share Tech Mono',monospace;font-size:28px;color:var(--cyan);line-height:1;}
+  .detail-stat-unit {font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--dim);margin-top:3px;}
+
+  .depth-profile{width:100%;height:120px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+
+  .sample-table-wrap{max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;}
+  .sample-table-wrap::-webkit-scrollbar{width:3px;}
+  .sample-table-wrap::-webkit-scrollbar-thumb{background:var(--muted);border-radius:2px;}
+  .sample-table{width:100%;border-collapse:collapse;font-family:'Share Tech Mono',monospace;font-size:13px;}
+  .sample-table th{background:var(--bg3);color:var(--muted);font-size:10px;letter-spacing:1px;padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);position:sticky;top:0;}
+  .sample-table td{padding:7px 12px;border-bottom:1px solid var(--border);color:var(--dim);}
+  .sample-table tr:last-child td{border-bottom:none;}
+  .sample-table td:first-child{color:var(--muted);}
+  .sample-table td:nth-child(2){color:var(--cyan);}
+
+
+  /* Live Data Panel */
+  .live-panel{display:none;flex-direction:column;gap:12px;width:100%;}
+  .live-panel.active{display:flex;}
+  .live-header{display:flex;align-items:center;justify-content:space-between;}
+  .live-title{font-family:'Share Tech Mono',monospace;font-size:13px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;}
+  .live-badge{font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:1px;padding:3px 10px;border-radius:12px;background:rgba(61,255,160,.12);border:1px solid var(--green);color:var(--green);display:flex;align-items:center;gap:6px;}
+  .live-badge-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink .9s infinite;}
+  .live-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;}
+  .live-cell{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:8px 12px;}
+  .live-cell.wide{grid-column:span 2;}
+  .live-cell-label{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1.5px;color:var(--muted);margin-bottom:3px;}
+  .live-cell-val{font-family:'Share Tech Mono',monospace;font-size:20px;color:var(--cyan);line-height:1;}
+  .live-cell-unit{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--dim);margin-top:2px;}
+  .deco-flag{font-family:'Share Tech Mono',monospace;font-size:18px;font-weight:700;letter-spacing:2px;}
+  .deco-flag.ok  {color:var(--green);}
+  .deco-flag.deco{color:var(--red);animation:blink .6s infinite;}
+  .live-divider{width:100%;height:1px;background:var(--border);margin:4px 0;}
+
+
+  /* Sim profile graph */
+  .sim-graph-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px 18px;width:100%;}
+  .sim-graph-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+  .sim-graph-title{font-family:'Share Tech Mono',monospace;font-size:13px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;}
+  .sim-graph-meta{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--dim);}
+  .sim-graph-canvas{width:100%;height:160px;display:block;border-radius:4px;max-width:100%;}
+  .sim-graph-labels{display:flex;justify-content:space-between;margin-top:6px;}
+  .sim-graph-label{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);}
+
+  /* Toast */
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:10px 20px;border-radius:6px;font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:1px;transition:transform .3s;z-index:9999;white-space:nowrap;}
+  .toast.show   {transform:translateX(-50%) translateY(0);}
+  .toast.success{border-color:var(--green);color:var(--green);}
+  .toast.error  {border-color:var(--red);  color:var(--red);}
+</style>
+</head>
+<body>
+
+<div class="header"><div class="logo"><span class="logo-dive">DIVE</span><span class="logo-computer">COMPUTER</span><span class="logo-companion">COMPANION</span></div></div>
+
+<div class="ble-bar">
+  <div class="dot" id="dot"></div>
+  <div class="ble-label" id="bleLabel">NOT CONNECTED</div>
+  <button class="btn btn-cyan" id="bleBtn" onclick="toggleBLE()">CONNECT</button>
+</div>
+
+<div class="tab-nav">
+  <button class="tab-btn active" id="tab-btn-logs"     onclick="switchTab('logs')">LOGS</button>
+  <button class="tab-btn"        id="tab-btn-sim"      onclick="switchTab('sim')">SIM</button>
+  <button class="tab-btn"        id="tab-btn-settings" onclick="switchTab('settings')">SETTINGS</button>
+</div>
+
+<!-- ════════════ SIM ════════════ -->
+<div class="tab-panel" id="panel-sim">
+
+  <div class="rec-pill" id="recPill">
+    <div class="rec-dot"></div>
+    <span id="recLabel">REC · SIM · 00:00</span>
+  </div>
+
+  <div class="depth-display">
+    <div class="depth-label">SIMULATED DEPTH</div>
+    <div class="depth-value" id="depthValue">0.0</div>
+    <div class="depth-unit">metres</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Depth Override</div>
+    <div class="slider-row">
+      <div class="slider-label">DEPTH</div>
+      <div class="slider-readout" id="depthReadout">0.0 m</div>
+    </div>
+    <input type="range" id="depthSlider" min="0" max="60" step="0.5" value="0" oninput="onDepthSlider(this.value)">
+    <div class="tick-marks"><span>0m</span><span>15m</span><span>30m</span><span>45m</span><span>60m</span></div>
+    <div class="controls">
+      <button class="btn btn-yellow" id="sendBtn"   onclick="sendDepth()"  disabled>SEND DEPTH</button>
+      <button class="btn btn-dim"    id="sensorBtn" onclick="sendSensor()" disabled>USE SENSOR</button>
+    </div>
+    <div class="status-bar sent" id="depthStatus" style="margin-top:12px;">MODE: SENSOR</div>
+  </div>
+
+
+  <!-- Live Device Data -->
+  <div class="live-panel" id="livePanel">
+    <div class="live-header">
+      <div class="live-title">Live from Device</div>
+      <div class="live-badge"><div class="live-badge-dot"></div>STREAMING</div>
+    </div>
+    <div class="live-grid">
+      <div class="live-cell">
+        <div class="live-cell-label">DEPTH</div>
+        <div class="live-cell-val" id="liveDepth">—</div>
+        <div class="live-cell-unit">metres</div>
+      </div>
+      <div class="live-cell">
+        <div class="live-cell-label">MAX DEPTH</div>
+        <div class="live-cell-val" id="liveMaxDepth">—</div>
+        <div class="live-cell-unit">metres</div>
+      </div>
+      <div class="live-cell">
+        <div class="live-cell-label">NDL</div>
+        <div class="live-cell-val" id="liveNDL">—</div>
+        <div class="live-cell-unit">minutes remaining</div>
+      </div>
+      <div class="live-cell">
+        <div class="live-cell-label">CEILING</div>
+        <div class="live-cell-val" id="liveCeiling">—</div>
+        <div class="live-cell-unit">metres</div>
+      </div>
+      <div class="live-cell">
+        <div class="live-cell-label">DIVE TIME</div>
+        <div class="live-cell-val" id="liveElapsed">—</div>
+        <div class="live-cell-unit">mm:ss</div>
+      </div>
+      <div class="live-cell" style="display:flex;flex-direction:column;justify-content:center;align-items:center;">
+        <div class="live-cell-label">STATUS</div>
+        <div class="deco-flag" id="liveDecoFlag">—</div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Sim Depth Profile -->
+  <div class="sim-graph-card">
+    <div class="sim-graph-header">
+      <div class="sim-graph-title">Depth Profile</div>
+      <div class="sim-graph-meta" id="simGraphMeta">NO DATA</div>
+    </div>
+    <canvas class="sim-graph-canvas" id="simProfileCanvas"></canvas>
+    <div class="sim-graph-labels">
+      <span class="sim-graph-label" id="simGraphT0">0:00</span>
+      <span class="sim-graph-label" style="color:var(--dim);">TIME →</span>
+      <span class="sim-graph-label" id="simGraphTmax">—</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- ════════════ SETTINGS ════════════ -->
+<div class="tab-panel" id="panel-settings">
+
+  <!-- GF -->
+  <div class="card">
+    <div class="card-title">Gradient Factors</div>
+    <div style="margin-bottom:12px;">
+      <div class="slider-row">
+        <div class="slider-label">GF LOW <span style="color:var(--muted);font-size:11px;">(deepest stop)</span></div>
+        <div class="slider-readout" id="gfLowReadout">100</div>
+      </div>
+      <input type="range" id="gfLowSlider" min="10" max="100" step="5" value="100" oninput="onGFSlider()">
+      <div class="tick-marks"><span>10</span><span>30</span><span>55</span><span>80</span><span>100</span></div>
+      <div class="slider-row">
+        <div class="slider-label">GF HIGH <span style="color:var(--muted);font-size:11px;">(shallowest stop)</span></div>
+        <div class="slider-readout" id="gfHighReadout">100</div>
+      </div>
+      <input type="range" id="gfHighSlider" min="10" max="100" step="5" value="100" oninput="onGFSlider()">
+      <div class="tick-marks"><span>10</span><span>30</span><span>55</span><span>80</span><span>100</span></div>
+    </div>
+    <div class="gf-presets">
+      <button class="preset-btn active" onclick="setGFPreset(100,100)">100/100</button>
+      <button class="preset-btn"        onclick="setGFPreset(85,85)">85/85</button>
+      <button class="preset-btn"        onclick="setGFPreset(70,85)">70/85</button>
+      <button class="preset-btn"        onclick="setGFPreset(40,85)">40/85</button>
+      <button class="preset-btn"        onclick="setGFPreset(30,70)">30/70</button>
+    </div>
+    <button class="btn btn-cyan btn-block" id="sendGFBtn" onclick="sendGF()" disabled>SEND GF TO DEVICE</button>
+    <div class="status-bar" id="gfStatus" style="margin-top:10px;">GF: 100/100</div>
+  </div>
+
+  <!-- Device (unified) -->
+  <div class="card">
+    <div class="card-title">Device</div>
+
+    <!-- Row: Device Name -->
+    <div class="setting-row">
+      <div class="setting-key">DEVICE NAME</div>
+      <div class="setting-inline">
+        <div class="setting-val" id="devNameVal">—</div>
+        <button class="btn btn-inline" id="sendNameBtn" onclick="openNameEdit()" disabled>RENAME</button>
+      </div>
+    </div>
+    <!-- Name edit sub-row (hidden until RENAME clicked) -->
+    <div id="nameEditRow" style="display:none;padding:8px 0 4px;gap:8px;" class="setting-inline">
+      <input class="inline-input" id="nameInput" type="text" maxlength="20" placeholder="DIY DIVE" oninput="onNameInput()" style="width:130px;">
+      <button class="btn btn-inline" id="sendNameConfirm" onclick="sendName()" disabled>SEND</button>
+      <button class="btn btn-inline" onclick="closeNameEdit()" style="color:var(--dim);">✕</button>
+    </div>
+
+    <!-- Row: Firmware -->
+    <div class="setting-row">
+      <div class="setting-key">FIRMWARE</div>
+      <div class="setting-inline">
+        <div class="setting-val" id="fwVer">—</div>
+        <button class="btn btn-inline" id="fwCheckBtn" onclick="checkFW()" disabled>UPDATE</button>
+      </div>
+    </div>
+
+    <!-- Row: Time Sync -->
+    <div class="setting-row" style="align-items:flex-start;padding-top:12px;">
+      <div class="setting-key" style="padding-top:2px;">TIME SYNC</div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:10px;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--dim);">LOCAL</span>
+          <div class="setting-val" id="localClock" style="color:var(--cyan);font-size:14px;">--:--:--</div>
+          <span id="syncedCheck" style="font-size:13px;color:var(--green);display:none;">✓</span>
+        </div>
+        <div class="setting-inline">
+          <input class="inline-input inline-time" id="timeInput" type="time" step="1" placeholder="HH:MM:SS">
+          <button class="btn btn-inline" id="timeSyncBtn" onclick="doTimeSync()" disabled>SYNC</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row: Rotation -->
+    <div class="setting-row">
+      <div class="setting-key">ROTATION</div>
+      <div class="setting-inline">
+        <span class="setting-val" id="rotateVal" style="margin-right:8px;">—</span>
+        <button class="btn btn-inline" id="rotateBtn" onclick="onRotateClick()" disabled>FLIP</button>
+      </div>
+    </div>
+
+    <!-- Row: Screen mode -->
+    <div class="setting-row">
+      <div class="setting-key">SCREEN</div>
+      <div class="setting-inline">
+        <span class="setting-val" id="screenVal" style="margin-right:8px;">—</span>
+        <button class="btn btn-inline" id="screenBtn" onclick="onScreenClick()" disabled>SLEEP</button>
+      </div>
+    </div>
+
+    <!-- Row: Brightness -->
+    <div class="setting-row" style="border-bottom:none;">
+      <div class="setting-key">BRIGHTNESS</div>
+      <div class="setting-inline" style="gap:10px;">
+        <input type="range" id="brightSlider" min="0" max="100" step="5" value="80"
+               oninput="onBrightInput()" onchange="onBrightChange()" disabled
+               style="width:140px;">
+        <div class="setting-val" id="brightVal" style="min-width:42px;text-align:right;">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Debug log -->
+  <div class="card" style="padding-bottom:12px;">
+    <div class="card-title" style="margin-bottom:8px;">Debug Log</div>
+    <div class="debug-toggle" onclick="toggleDebug()" id="debugToggle">▶ SHOW EVENTS</div>
+    <div class="debug-log" id="debugLog"></div>
+  </div>
+
+</div>
+
+<!-- ════════════ LOGS ════════════ -->
+<div class="tab-panel active" id="panel-logs">
+
+  <div class="logs-header">
+    <div class="logs-title">Dive Log</div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <span style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--muted);" id="diveCount">0 dives</span>
+    </div>
+  </div>
+
+  <div class="dive-list" id="diveList">
+    <div class="log-empty" id="diveEmpty">NO DIVES LOGGED YET<br><span style="font-size:10px;color:var(--muted);letter-spacing:0;">Dives start recording when depth exceeds 0.5m</span></div>
+  </div>
+
+</div>
+
+<!-- ════════════ DETAIL OVERLAY ════════════ -->
+<div class="detail-overlay" id="detailOverlay">
+  <div class="detail-header">
+    <div class="detail-back" onclick="closeDetail()">← BACK</div>
+    <div class="detail-title" id="detailTitle">DIVE #1</div>
+    <div style="margin-left:auto;display:flex;gap:8px;">
+      <span class="dive-badge" id="detailBadge">SIM</span>
+    </div>
+  </div>
+  <div class="detail-body">
+
+    <div class="detail-stats-grid" id="detailStats"></div>
+
+    <div>
+      <div style="font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:3px;color:var(--muted);margin-bottom:10px;">DEPTH PROFILE</div>
+      <canvas class="depth-profile" id="profileCanvas"></canvas>
+    </div>
+
+    <div>
+      <div style="font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:3px;color:var(--muted);margin-bottom:10px;">SAMPLES (every 5s)</div>
+      <div class="sample-table-wrap">
+        <table class="sample-table">
+          <thead><tr><th>TIME</th><th>DEPTH</th><th>GF</th></tr></thead>
+          <tbody id="sampleBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <button class="btn btn-cyan btn-block" onclick="downloadDive()">↓ DOWNLOAD CSV</button>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── BLE ──────────────────────────────────────────────────────────
+const SERVICE = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+const RX_UUID = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';
+const TX_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
+let device=null, rxChar=null, txChar=null, connected=false;
+let currentDepth=0.0, gfLow=100, gfHigh=100;
+let isSim = true; // true when depth is being overridden via slider
+
+// ── Dive recording state ─────────────────────────────────────────
+let dives = [];          // completed dives
+let activeDive = null;   // { startTs, samples:[], mode, gfLow, gfHigh }
+let recTimer = null;
+let sampleInterval = null;
+const DIVE_THRESHOLD = 0.5; // metres to start recording
+
+// ── Dive detail (currently viewed) ───────────────────────────────
+let viewingDive = null;
+
+// ── Tabs ─────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  document.getElementById('tab-btn-' + name).classList.add('active');
+}
+
+// ── BLE ──────────────────────────────────────────────────────────
+async function toggleBLE() {
+  if (connected) { device.gatt.disconnect(); return; }
+  try {
+    setDot('scanning'); setLabel('SCANNING…');
+    device = await navigator.bluetooth.requestDevice({
+      filters:[{name:'DiveComputer'}], optionalServices:[SERVICE]
+    });
+    device.addEventListener('gattserverdisconnected', onDisconnect);
+    const server = await device.gatt.connect();
+    const svc    = await server.getPrimaryService(SERVICE);
+    rxChar       = await svc.getCharacteristic(RX_UUID);
+    connected    = true;
+    setDot('connected'); setLabel(device.name || 'DiveComputer');
+    document.getElementById('bleBtn').textContent   = 'DISCONNECT';
+    document.getElementById('sendBtn').disabled     = false;
+    document.getElementById('sensorBtn').disabled   = false;
+    document.getElementById('sendGFBtn').disabled   = false;
+    document.getElementById('timeSyncBtn').disabled = false;
+    document.getElementById('fwCheckBtn').disabled  = false;
+    document.getElementById('sendNameBtn').disabled    = false;
+    document.getElementById('sendNameConfirm').disabled = false;
+    document.getElementById('fwCheckBtn').disabled      = false;
+    document.getElementById('brightSlider').disabled    = false;
+    document.getElementById('rotateBtn').disabled       = false;
+    document.getElementById('screenBtn').disabled       = false;
+    // Subscribe to TX notifications (device → webapp)
+    txChar = await svc.getCharacteristic(TX_UUID);
+    await txChar.startNotifications();
+    txChar.addEventListener('characteristicvaluechanged', onNotify);
+
+    // device.name == BLE ad name == dive_state display name (kept in sync by firmware)
+    const dName = device.name || '—';
+    document.getElementById('devNameVal').textContent = dName;
+    document.getElementById('nameInput').value = dName;
+
+    // Sync time then request full status (GF, depth, fw version etc.)
+    await syncTime();
+    await send('STATUS');
+    startLiveData();
+    dbgLog('ok', 'CONNECTED — ' + dName);
+    toast('CONNECTED', 'success');
+  } catch(e) {
+    setDot(''); setLabel('NOT CONNECTED');
+    if (e.name !== 'NotFoundError') { dbgLog('err', 'BLE: '+e.message); toast('BLE: '+e.message,'error'); }
+  }
+}
+
+function onDisconnect() {
+  connected=false; rxChar=null; txChar=null;
+  stopLiveData();
+  setDot(''); setLabel('NOT CONNECTED');
+  document.getElementById('bleBtn').textContent   = 'CONNECT';
+  ['sendBtn','sensorBtn','sendGFBtn','timeSyncBtn','fwCheckBtn','sendNameBtn','sendNameConfirm','brightSlider','rotateBtn','screenBtn'].forEach(id =>
+    document.getElementById(id).disabled = true);
+  document.getElementById('syncedCheck').style.display = 'none';
+  dbgLog('err','DISCONNECTED');
+  toast('DISCONNECTED','error');
+}
+
+async function send(str) {
+  if (!rxChar) return false;
+  try {
+    await rxChar.writeValueWithResponse(new TextEncoder().encode(str));
+    dbgLog('info','→ ' + str);
+    return true;
+  } catch(e) {
+    dbgLog('err','SEND ERR: '+e.message);
+    toast('ERR: '+e.message,'error');
+    return false;
+  }
+}
+
+// ── SIM ──────────────────────────────────────────────────────────
+let bleDepthBusy    = false;
+let bleDepthPending = null;
+let bleDepthLastSent = 0;
+const BLE_DEPTH_MIN_INTERVAL = 150; // ms minimum between sends
+
+function onDepthSlider(val) {
+  currentDepth = parseFloat(val);
+  isSim = true;
+  document.getElementById('depthReadout').textContent = currentDepth.toFixed(1) + ' m';
+  const el = document.getElementById('depthValue');
+  el.textContent = currentDepth.toFixed(1);
+  el.className   = 'depth-value' + (currentDepth>=40?' danger':currentDepth>=20?' warning':'');
+  checkDiveRecording();
+  if (!connected) return;
+  bleDepthPending = currentDepth; // always store latest
+  if (!bleDepthBusy) scheduleBLEDepth();
+}
+
+function scheduleBLEDepth() {
+  const now = Date.now();
+  const wait = Math.max(0, BLE_DEPTH_MIN_INTERVAL - (now - bleDepthLastSent));
+  setTimeout(() => {
+    if (bleDepthPending === null) return;
+    const depth = bleDepthPending;
+    bleDepthPending = null;
+    sendDepthBLE(depth);
+  }, wait);
+}
+
+async function sendDepthBLE(depth) {
+  bleDepthBusy = true;
+  bleDepthLastSent = Date.now();
+  const ok = await send('DEPTH:' + depth.toFixed(1));
+  bleDepthBusy = false;
+  if (ok) {
+    const st = document.getElementById('depthStatus');
+    st.textContent = 'MODE: BLE OVERRIDE @ ' + depth.toFixed(1) + 'm';
+    st.className   = 'status-bar active';
+    simProfileRecord();
+  }
+  // Flush any value that arrived while we were busy
+  if (bleDepthPending !== null) scheduleBLEDepth();
+}
+
+async function sendDepth() {
+  const ok = await send('DEPTH:' + currentDepth.toFixed(1));
+  if (!ok) return;
+  isSim = true;
+  const el = document.getElementById('depthStatus');
+  el.textContent = 'MODE: BLE OVERRIDE @ ' + currentDepth.toFixed(1) + 'm';
+  el.className   = 'status-bar active';
+  simProfileRecord();   // only log points actually sent to device
+  toast('DEPTH SENT','success');
+}
+
+async function sendSensor() {
+  const ok = await send('DEPTH:SENSOR');
+  if (!ok) return;
+  isSim = false;
+  const el = document.getElementById('depthStatus');
+  el.textContent = 'MODE: SENSOR';
+  el.className   = 'status-bar sent';
+  toast('SENSOR MODE','success');
+}
+
+// ── SETTINGS — GF ────────────────────────────────────────────────
+function onGFSlider() {
+  gfLow  = parseInt(document.getElementById('gfLowSlider').value);
+  gfHigh = parseInt(document.getElementById('gfHighSlider').value);
+  if (gfLow > gfHigh) { gfHigh=gfLow; document.getElementById('gfHighSlider').value=gfHigh; }
+  document.getElementById('gfLowReadout').textContent  = gfLow;
+  document.getElementById('gfHighReadout').textContent = gfHigh;
+  updateGFStatus(false); syncPresetHighlight();
+}
+
+function setGFPreset(lo,hi) {
+  gfLow=lo; gfHigh=hi;
+  document.getElementById('gfLowSlider').value  = lo;
+  document.getElementById('gfHighSlider').value = hi;
+  document.getElementById('gfLowReadout').textContent  = lo;
+  document.getElementById('gfHighReadout').textContent = hi;
+  updateGFStatus(false); syncPresetHighlight();
+}
+
+async function sendGF() {
+  const ok = await send('GF:'+gfLow+'/'+gfHigh);
+  if (!ok) return;
+  updateGFStatus(true);
+  dbgLog('ok','GF → '+gfLow+'/'+gfHigh);
+  toast('GF '+gfLow+'/'+gfHigh+' SENT','success');
+}
+
+function updateGFStatus(sent) {
+  const el = document.getElementById('gfStatus');
+  el.textContent = 'GF: '+gfLow+'/'+gfHigh+(sent?' — sent ✓':' (not sent)');
+  el.className   = 'status-bar '+(sent?'sent':'active');
+}
+
+function syncPresetHighlight() {
+  document.querySelectorAll('.preset-btn').forEach(b =>
+    b.classList.toggle('active', b.textContent===gfLow+'/'+gfHigh));
+}
+
+// ── SETTINGS — Time ──────────────────────────────────────────────
+async function syncTime() {
+  // Use whatever is in the manual input, else use current local time
+  const raw = document.getElementById('timeInput').value;
+  const now=new Date(), pad=n=>String(n).padStart(2,'0');
+  const ts = raw || (pad(now.getHours())+':'+pad(now.getMinutes())+':'+pad(now.getSeconds()));
+  const ok = await send('TIME:'+ts);
+  if (ok) {
+    document.getElementById('syncedCheck').style.display = 'inline';
+    dbgLog('ok','TIME → '+ts);
+  }
+}
+
+async function doTimeSync() {
+  await syncTime();
+  toast('TIME SYNCED','success');
+}
+
+// ── SETTINGS — FW ────────────────────────────────────────────────
+function checkFW() {
+  // Stub: real impl would push OTA binary. Currently no update available.
+  const el = document.getElementById('fwVer');
+  el.textContent = 'v1.0.0 — UP TO DATE';
+  el.className   = 'setting-val ok';
+  dbgLog('info','FW CHECK → v1.0.0 (up to date)');
+  toast('FW UP TO DATE','success');
+}
+
+// ── SETTINGS — Device Name ────────────────────────────────────────
+function onNameInput() {
+  const val = document.getElementById('nameInput').value.trim();
+  document.getElementById('nameInput').dataset.userEdited = '1';
+  document.getElementById('sendNameConfirm').disabled = !val || !connected;
+}
+
+async function sendName() {
+  const val = document.getElementById('nameInput').value.trim().slice(0,20);
+  if (!val) return;
+  const ok = await send('NAME:'+val);
+  if (!ok) return;
+  // Firmware updates both display name + BLE ad name — mirror it here
+  document.getElementById('devNameVal').textContent = val;
+  document.getElementById('nameInput').dataset.userEdited = '';
+  closeNameEdit();
+  dbgLog('ok','NAME → '+val);
+  toast('"'+val+'" SENT','success');
+}
+
+// ── Brightness ────────────────────────────────────────────────────
+// Real-time: send on every input event but throttled to ~50ms so we
+// don't flood the BLE channel during a fast drag. Final value is also
+// sent on release to guarantee the device lands on the exact value.
+let brightSendTimer = null;
+let brightLastSent  = -1;
+
+function onBrightInput() {
+  const slider = document.getElementById('brightSlider');
+  const val    = parseInt(slider.value);
+  slider.dataset.dragging = '1';
+  document.getElementById('brightVal').textContent = val + '%';
+
+  // Throttle: queue the latest value, fire at most every 50ms
+  if (brightSendTimer) return;
+  brightSendTimer = setTimeout(async () => {
+    brightSendTimer = null;
+    const cur = parseInt(document.getElementById('brightSlider').value);
+    if (connected && cur !== brightLastSent) {
+      brightLastSent = cur;
+      await send('BRIGHTNESS:' + cur);
+    }
+  }, 50);
+}
+
+async function onBrightChange() {
+  const slider = document.getElementById('brightSlider');
+  const val    = parseInt(slider.value);
+  delete slider.dataset.dragging;
+  if (!connected) return;
+  // Always send the final value on release, even if throttled timer skipped it
+  if (val !== brightLastSent) {
+    brightLastSent = val;
+    await send('BRIGHTNESS:' + val);
+  }
+  dbgLog('ok','BRIGHTNESS → ' + val + '%');
+}
+
+// ── Rotation ──────────────────────────────────────────────────
+// Firmware uses TFT_eSPI rotation values (1 = normal, 3 = flipped).
+// We send a logical 0/2 over the wire; firmware translates.
+let currentRotation = 1;
+
+async function onRotateClick() {
+  if (!connected) return;
+  const next = (currentRotation === 1) ? 2 : 0;
+  const ok = await send('ROTATE:' + next);
+  if (ok) dbgLog('ok','ROTATE → ' + next);
+}
+
+// ── Screen mode ───────────────────────────────────────────────
+let currentScreen = 'DIVE';
+
+async function onScreenClick() {
+  if (!connected) return;
+  const next = (currentScreen === 'DIVE') ? 'TIME' : 'DIVE';
+  const ok = await send('SCREEN:' + next);
+  if (ok) dbgLog('ok','SCREEN → ' + next);
+}
+
+// ── Debug log ─────────────────────────────────────────────────────
+const debugEntries = [];
+function dbgLog(type, msg) {
+  const now=new Date(), pad=n=>String(n).padStart(2,'0');
+  const t=pad(now.getHours())+':'+pad(now.getMinutes())+':'+pad(now.getSeconds());
+  debugEntries.push({type,msg,t});
+  const log = document.getElementById('debugLog');
+  const div = document.createElement('div');
+  div.className='dbg-entry '+type;
+  div.textContent=t+' '+msg;
+  log.insertBefore(div, log.firstChild);
+}
+
+function toggleDebug() {
+  const log = document.getElementById('debugLog');
+  const tog = document.getElementById('debugToggle');
+  const open = log.classList.toggle('open');
+  tog.textContent = (open ? '▼ HIDE' : '▶ SHOW') + ' EVENTS';
+}
+
+// ── Dive recording ────────────────────────────────────────────────
+function checkDiveRecording() {
+  if (currentDepth >= DIVE_THRESHOLD && !activeDive) {
+    startDive();
+  } else if (currentDepth < DIVE_THRESHOLD && activeDive) {
+    endDive();
+  }
+  if (activeDive) {
+    // update current sample depth
+    activeDive.currentDepth = currentDepth;
+  }
+}
+
+function startDive() {
+  const mode = isSim ? 'sim' : 'live';
+  activeDive = {
+    num: dives.length + 1,
+    mode,
+    startTs: Date.now(),
+    startDate: new Date(),
+    samples: [],       // {t_sec, depth, gfLow, gfHigh}
+    maxDepth: 0,
+    currentDepth: currentDepth,
+    gfLow, gfHigh
+  };
+  // Sample every 5 seconds
+  sampleInterval = setInterval(() => {
+    if (!activeDive) return;
+    const t = Math.round((Date.now() - activeDive.startTs) / 1000);
+    const d = activeDive.currentDepth;
+    if (d > activeDive.maxDepth) activeDive.maxDepth = d;
+    activeDive.samples.push({ t, depth: d, gfLow, gfHigh });
+  }, 5000);
+  // Also record t=0
+  activeDive.samples.push({ t:0, depth:currentDepth, gfLow, gfHigh });
+  if (currentDepth > activeDive.maxDepth) activeDive.maxDepth = currentDepth;
+
+  // Timer display
+  recTimer = setInterval(updateRecPill, 1000);
+  document.getElementById('recPill').classList.add('active');
+  updateRecPill();
+  dbgLog('warn', 'DIVE #'+activeDive.num+' STARTED ('+mode.toUpperCase()+')');
+}
+
+function endDive() {
+  if (!activeDive) return;
+  clearInterval(recTimer);
+  clearInterval(sampleInterval);
+  document.getElementById('recPill').classList.remove('active');
+
+  const durationSec = Math.round((Date.now() - activeDive.startTs) / 1000);
+  const samples = activeDive.samples;
+  const avgDepth = samples.length
+    ? (samples.reduce((s,x)=>s+x.depth,0)/samples.length)
+    : activeDive.maxDepth;
+
+  const dive = {
+    num: activeDive.num,
+    mode: activeDive.mode,
+    date: activeDive.startDate,
+    durationSec,
+    maxDepth: activeDive.maxDepth,
+    avgDepth,
+    gfLow: activeDive.gfLow,
+    gfHigh: activeDive.gfHigh,
+    samples
+  };
+  dives.push(dive);
+  activeDive = null;
+  renderDiveList();
+  dbgLog('ok','DIVE #'+dive.num+' SAVED — '+fmtDuration(durationSec)+' max '+dive.maxDepth.toFixed(1)+'m');
+  toast('DIVE #'+dive.num+' SAVED','success');
+}
+
+function updateRecPill() {
+  if (!activeDive) return;
+  const sec = Math.round((Date.now() - activeDive.startTs) / 1000);
+  document.getElementById('recLabel').textContent =
+    'REC · '+(activeDive.mode==='sim'?'SIM':'LIVE')+' · '+fmtDuration(sec);
+}
+
+// ── Dive list rendering ───────────────────────────────────────────
+function renderDiveList() {
+  const list  = document.getElementById('diveList');
+  const empty = document.getElementById('diveEmpty');
+  document.getElementById('diveCount').textContent = dives.length + ' dive' + (dives.length!==1?'s':'');
+
+  if (!dives.length) {
+    list.innerHTML=''; list.appendChild(empty); return;
+  }
+  list.innerHTML='';
+  // newest first
+  [...dives].reverse().forEach(dive => {
+    const card = document.createElement('div');
+    card.className = 'dive-card';
+    card.onclick = () => openDetail(dive);
+
+    const dateStr = fmtDate(dive.date);
+    card.innerHTML = `
+      <div class="dive-card-top">
+        <div class="dive-num">DIVE #${dive.num}</div>
+        <div class="dive-badge ${dive.mode}">${dive.mode.toUpperCase()}</div>
+        <div class="dive-date">${dateStr}</div>
+      </div>
+      <div class="dive-stats">
+        <div class="dive-stat-cell">
+          <div class="dive-stat-label">DURATION</div>
+          <div class="dive-stat-val">${fmtDuration(dive.durationSec)}</div>
+          <div class="dive-stat-unit">mm:ss</div>
+        </div>
+        <div class="dive-stat-cell">
+          <div class="dive-stat-label">MAX DEPTH</div>
+          <div class="dive-stat-val">${dive.maxDepth.toFixed(1)}</div>
+          <div class="dive-stat-unit">metres</div>
+        </div>
+        <div class="dive-stat-cell">
+          <div class="dive-stat-label">AVG DEPTH</div>
+          <div class="dive-stat-val">${dive.avgDepth.toFixed(1)}</div>
+          <div class="dive-stat-unit">metres</div>
+        </div>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+}
+
+// ── Detail overlay ────────────────────────────────────────────────
+function openDetail(dive) {
+  viewingDive = dive;
+  document.getElementById('detailTitle').textContent = 'DIVE #'+dive.num;
+  const badge = document.getElementById('detailBadge');
+  badge.textContent = dive.mode.toUpperCase();
+  badge.className   = 'dive-badge '+dive.mode;
+
+  // Stats grid
+  const statsEl = document.getElementById('detailStats');
+  const stats = [
+    {label:'DURATION',  val:fmtDuration(dive.durationSec), unit:'mm:ss'},
+    {label:'MAX DEPTH', val:dive.maxDepth.toFixed(1),       unit:'metres'},
+    {label:'AVG DEPTH', val:dive.avgDepth.toFixed(1),       unit:'metres'},
+    {label:'GF LOW',    val:dive.gfLow,                     unit:'gradient'},
+    {label:'GF HIGH',   val:dive.gfHigh,                    unit:'gradient'},
+    {label:'SAMPLES',   val:dive.samples.length,             unit:'data pts'},
+  ];
+  statsEl.innerHTML = stats.map(s=>`
+    <div class="detail-stat">
+      <div class="detail-stat-label">${s.label}</div>
+      <div class="detail-stat-val">${s.val}</div>
+      <div class="detail-stat-unit">${s.unit}</div>
+    </div>`).join('');
+
+  // Profile canvas
+  drawProfile(dive);
+
+  // Sample table
+  const tbody = document.getElementById('sampleBody');
+  tbody.innerHTML = dive.samples.map(s=>`
+    <tr>
+      <td>${fmtDuration(s.t)}</td>
+      <td>${s.depth.toFixed(1)} m</td>
+      <td>${s.gfLow}/${s.gfHigh}</td>
+    </tr>`).join('');
+
+  document.getElementById('detailOverlay').classList.add('open');
+}
+
+function closeDetail() {
+  document.getElementById('detailOverlay').classList.remove('open');
+  viewingDive = null;
+}
+
+function drawProfile(dive) {
+  const canvas = document.getElementById('profileCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width  = canvas.offsetWidth  || 440;
+  canvas.height = canvas.offsetHeight || 120;
+  const W = canvas.width, H = canvas.height;
+  const PAD = {t:10,r:10,b:24,l:36};
+
+  ctx.clearRect(0,0,W,H);
+
+  if (!dive.samples.length) return;
+  const maxD = Math.max(dive.maxDepth, 1);
+  const maxT = dive.samples[dive.samples.length-1].t || 1;
+
+  const toX = t => PAD.l + (t/maxT)*(W-PAD.l-PAD.r);
+  const toY = d => PAD.t + (d/maxD)*(H-PAD.t-PAD.b);
+
+  // Grid
+  ctx.strokeStyle='#1a2235'; ctx.lineWidth=1;
+  [0.25,0.5,0.75,1].forEach(f=>{
+    const y=toY(maxD*f);
+    ctx.beginPath(); ctx.moveTo(PAD.l,y); ctx.lineTo(W-PAD.r,y); ctx.stroke();
+    ctx.fillStyle='#334155'; ctx.font='9px Share Tech Mono,monospace';
+    ctx.fillText((maxD*f).toFixed(0)+'m',2,y+3);
+  });
+
+  // Gradient fill
+  const grad = ctx.createLinearGradient(0,PAD.t,0,H-PAD.b);
+  grad.addColorStop(0,'rgba(0,212,255,0.35)');
+  grad.addColorStop(1,'rgba(0,212,255,0.02)');
+
+  ctx.beginPath();
+  ctx.moveTo(toX(dive.samples[0].t), toY(0));
+  dive.samples.forEach(s => ctx.lineTo(toX(s.t), toY(s.depth)));
+  ctx.lineTo(toX(dive.samples[dive.samples.length-1].t), toY(0));
+  ctx.closePath();
+  ctx.fillStyle=grad; ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  ctx.strokeStyle='#00d4ff'; ctx.lineWidth=2;
+  dive.samples.forEach((s,i) => {
+    if(i===0) ctx.moveTo(toX(s.t),toY(s.depth));
+    else ctx.lineTo(toX(s.t),toY(s.depth));
+  });
+  ctx.stroke();
+}
+
+// ── CSV download ──────────────────────────────────────────────────
+function downloadDive() {
+  if (!viewingDive) return;
+  const d = viewingDive;
+  const rows = [
+    ['DiveComp Export'],
+    ['Dive #', d.num],
+    ['Mode', d.mode.toUpperCase()],
+    ['Date', fmtDate(d.date)],
+    ['Duration', fmtDuration(d.durationSec)],
+    ['Max Depth (m)', d.maxDepth.toFixed(1)],
+    ['Avg Depth (m)', d.avgDepth.toFixed(1)],
+    ['GF Low', d.gfLow],
+    ['GF High', d.gfHigh],
+    [],
+    ['Time (mm:ss)', 'Depth (m)', 'GF Low', 'GF High'],
+    ...d.samples.map(s=>[fmtDuration(s.t), s.depth.toFixed(1), s.gfLow, s.gfHigh])
+  ];
+  const csv = rows.map(r=>r.join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `dive_${String(d.num).padStart(3,'0')}_${d.mode}.csv`;
+  a.click();
+  toast('DOWNLOADED','success');
+}
+
+// ── Helpers ───────────────────────────────────────────────────────
+function fmtDuration(sec) {
+  const m = Math.floor(sec/60), s = sec%60;
+  return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+}
+
+function fmtDate(d) {
+  return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})
+    + ' ' + d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+}
+
+function setDot(s)   { document.getElementById('dot').className='dot'+(s?' '+s:''); }
+function setLabel(t) { document.getElementById('bleLabel').textContent=t; }
+
+let toastTimer;
+function toast(msg,type) {
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className='toast show'+(type?' '+type:'');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.className='toast',2500);
+}
+
+// ── Live clock ────────────────────────────────────────────────────
+function startClock() {
+  function tick() {
+    const now=new Date(), pad=n=>String(n).padStart(2,'0');
+    document.getElementById('localClock').textContent =
+      pad(now.getHours())+':'+pad(now.getMinutes())+':'+pad(now.getSeconds());
+  }
+  tick();
+  setInterval(tick, 1000);
+}
+startClock();
+
+// ── TX Notify — parse JSON packets from device ───────────────────
+function onNotify(event) {
+  const raw = new TextDecoder().decode(event.target.value);
+  dbgLog('info', '<- ' + raw);
+  try {
+    const d = JSON.parse(raw);
+
+    // Live data panel
+    if (d.depth    !== undefined) setLive('liveDepth',    d.depth.toFixed(1),    'm');
+    if (d.ndl      !== undefined) setLive('liveNDL',      Math.round(d.ndl),     'min');
+    if (d.ceiling  !== undefined) setLive('liveCeiling',  d.ceiling.toFixed(1),  'm');
+    if (d.elapsed  !== undefined) setLive('liveElapsed',  fmtDuration(d.elapsed),'');
+    if (d.maxDepth !== undefined) setLive('liveMaxDepth', d.maxDepth.toFixed(1), 'm');
+    if (d.deco !== undefined) {
+      const el = document.getElementById('liveDecoFlag');
+      if (el) { el.textContent = d.deco ? 'DECO' : 'NDL OK'; el.className = 'deco-flag ' + (d.deco ? 'deco' : 'ok'); }
+    }
+
+    // Sync GF sliders from device on first STATUS response
+    if (d.gfLow !== undefined && d.gfHigh !== undefined) {
+      gfLow = d.gfLow; gfHigh = d.gfHigh;
+      document.getElementById('gfLowSlider').value  = gfLow;
+      document.getElementById('gfHighSlider').value = gfHigh;
+      document.getElementById('gfLowReadout').textContent  = gfLow;
+      document.getElementById('gfHighReadout').textContent = gfHigh;
+      updateGFStatus(false); syncPresetHighlight();
+      dbgLog('ok', 'GF synced from device: ' + gfLow + '/' + gfHigh);
+    }
+
+    // Firmware version
+    if (d.fw !== undefined) {
+      const el = document.getElementById('fwVer');
+      el.textContent = 'v' + d.fw; el.className = 'setting-val ok';
+    }
+
+    // Device display name — auto-populate from firmware STATUS
+    if (d.deviceName !== undefined && d.deviceName !== '') {
+      document.getElementById('devNameVal').textContent = d.deviceName;
+      const inp = document.getElementById('nameInput');
+      if (!inp.dataset.userEdited) inp.value = d.deviceName;
+    }
+
+    // Brightness — sync slider from device, but don't fight an active drag
+    if (d.brightness !== undefined) {
+      const slider = document.getElementById('brightSlider');
+      if (!slider.dataset.dragging) slider.value = d.brightness;
+      document.getElementById('brightVal').textContent = d.brightness + '%';
+    }
+
+    // Rotation — 1 = normal, 3 = flipped
+    if (d.rotation !== undefined) {
+      currentRotation = d.rotation;
+      document.getElementById('rotateVal').textContent =
+        (d.rotation === 3) ? 'FLIPPED' : 'NORMAL';
+    }
+
+    // Screen mode — DIVE (full UI) or TIME (sleep clock)
+    if (d.screen !== undefined) {
+      currentScreen = d.screen;
+      document.getElementById('screenVal').textContent = d.screen;
+      // Button label shows the action it'll DO, not current state
+      document.getElementById('screenBtn').textContent =
+        (d.screen === 'TIME') ? 'WAKE' : 'SLEEP';
+    }
+
+    // Drive dive recording from live sensor depth (when not in sim mode)
+    if (d.depth !== undefined && !isSim) {
+      currentDepth = d.depth;
+      checkDiveRecording();
+    }
+
+  } catch(e) {
+    dbgLog('warn', 'JSON ERR: ' + e.message);
+  }
+}
+
+function setLive(id, val, unit) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val + (unit ? ' ' + unit : '');
+}
+
+// ── Live poll (requests STATUS every 2s) ─────────────────────────
+let liveTimer = null;
+function startLiveData() {
+  if (liveTimer) return;
+  liveTimer = setInterval(async () => { if (connected) await send('STATUS'); }, 2000);
+  document.getElementById('livePanel').classList.add('active');
+}
+function stopLiveData() {
+  clearInterval(liveTimer); liveTimer = null;
+  const p = document.getElementById('livePanel');
+  if (p) p.classList.remove('active');
+  ['liveDepth','liveNDL','liveCeiling','liveElapsed','liveMaxDepth'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.textContent = '—';
+  });
+  const f = document.getElementById('liveDecoFlag');
+  if (f) { f.textContent = '—'; f.className = 'deco-flag'; }
+}
+
+// ── Rename flow ───────────────────────────────────────────────────
+function openNameEdit() {
+  document.getElementById('nameEditRow').style.display = 'flex';
+}
+function closeNameEdit() {
+  document.getElementById('nameEditRow').style.display = 'none';
+}
+
+// ── Sim Depth Profile Graph ───────────────────────────────────────
+const SIM_PROFILE = [];     // {t: seconds, d: metres}
+let simProfileStart = null; // performance.now() when first point recorded
+let simGraphTimer   = null;
+
+function simProfileRecord() {
+  // First call — start the clock and kick off the 1s ticker
+  if (simProfileStart === null) {
+    simProfileStart = performance.now();
+    simGraphTimer = setInterval(() => {
+      const t = (performance.now() - simProfileStart) / 1000;
+      SIM_PROFILE.push({ t, d: currentDepth });
+      drawSimProfile();
+    }, 1000);
+  }
+  // Also record immediately on this call (slider move)
+  const t = (performance.now() - simProfileStart) / 1000;
+  SIM_PROFILE.push({ t, d: currentDepth });
+  drawSimProfile();
+}
+
+function simProfileReset() {
+  SIM_PROFILE.length = 0;
+  simProfileStart = null;
+  clearInterval(simGraphTimer);
+  simGraphTimer = null;
+  drawSimProfile();
+}
+
+function drawSimProfile() {
+  const canvas = document.getElementById('simProfileCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  // Fixed logical size — avoids getBoundingClientRect() returning 0 when tab hidden
+  const W = 440, H = 160;
+  canvas.width  = W;
+  canvas.height = H;
+
+  const PAD = { t: 8, r: 12, b: 28, l: 38 };
+  ctx.clearRect(0, 0, W, H);
+
+  const meta  = document.getElementById('simGraphMeta');
+  const tEnd  = document.getElementById('simGraphTmax');
+
+  if (SIM_PROFILE.length < 2) {
+    // Empty state
+    ctx.fillStyle = 'rgba(144,224,239,0.04)';
+    ctx.fillRect(PAD.l, PAD.t, W - PAD.l - PAD.r, H - PAD.t - PAD.b);
+    ctx.font = '11px Share Tech Mono, monospace';
+    ctx.fillStyle = '#3a5a78';
+    ctx.textAlign = 'center';
+    ctx.fillText('MOVE DEPTH SLIDER TO BEGIN', W / 2, H / 2 - 4);
+    meta.textContent = 'NO DATA';
+    tEnd.textContent = '—';
+    return;
+  }
+
+  const maxT = SIM_PROFILE[SIM_PROFILE.length - 1].t;
+  const maxD = Math.max(...SIM_PROFILE.map(p => p.d), 1);
+
+  const toX = t => PAD.l + (t / maxT) * (W - PAD.l - PAD.r);
+  const toY = d => PAD.t + (d / maxD) * (H - PAD.t - PAD.b);
+
+  // Background
+  ctx.fillStyle = 'rgba(1,26,61,0.6)';
+  ctx.fillRect(PAD.l, PAD.t, W - PAD.l - PAD.r, H - PAD.t - PAD.b);
+
+  // Depth grid lines (Y axis)
+  const depthSteps = [10, 20, 30, 40, 50, 60].filter(d => d <= maxD + 5);
+  ctx.strokeStyle = 'rgba(42,64,96,0.8)';
+  ctx.lineWidth = 1;
+  ctx.font = '9px Share Tech Mono, monospace';
+  ctx.fillStyle = '#3a5a78';
+  ctx.textAlign = 'right';
+  depthSteps.forEach(d => {
+    const y = toY(d);
+    if (y > PAD.t && y < H - PAD.b) {
+      ctx.beginPath(); ctx.moveTo(PAD.l, y); ctx.lineTo(W - PAD.r, y); ctx.stroke();
+      ctx.fillText(d + 'm', PAD.l - 4, y + 3);
+    }
+  });
+
+  // Time grid lines (X axis)
+  const totalMin = maxT / 60;
+  const xStep = totalMin <= 5 ? 60 : totalMin <= 15 ? 120 : totalMin <= 30 ? 300 : 600;
+  ctx.textAlign = 'center';
+  for (let s = xStep; s < maxT; s += xStep) {
+    const x = toX(s);
+    ctx.beginPath(); ctx.moveTo(x, PAD.t); ctx.lineTo(x, H - PAD.b); ctx.stroke();
+    const m = Math.floor(s / 60), sec = s % 60;
+    ctx.fillText(m + ':' + String(sec).padStart(2,'0'), x, H - PAD.b + 12);
+  }
+
+  // Gradient fill under curve
+  const grad = ctx.createLinearGradient(0, PAD.t, 0, H - PAD.b);
+  grad.addColorStop(0, 'rgba(144,224,239,0.4)');
+  grad.addColorStop(1, 'rgba(144,224,239,0.02)');
+
+  ctx.beginPath();
+  ctx.moveTo(toX(SIM_PROFILE[0].t), toY(0));
+  SIM_PROFILE.forEach(p => ctx.lineTo(toX(p.t), toY(p.d)));
+  ctx.lineTo(toX(SIM_PROFILE[SIM_PROFILE.length-1].t), toY(0));
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Profile line
+  ctx.beginPath();
+  ctx.strokeStyle = '#90e0ef';
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  SIM_PROFILE.forEach((p, i) => {
+    if (i === 0) ctx.moveTo(toX(p.t), toY(p.d));
+    else ctx.lineTo(toX(p.t), toY(p.d));
+  });
+  ctx.stroke();
+
+  // Current depth dot
+  const last = SIM_PROFILE[SIM_PROFILE.length - 1];
+  ctx.beginPath();
+  ctx.arc(toX(last.t), toY(last.d), 4, 0, Math.PI * 2);
+  ctx.fillStyle = '#90e0ef';
+  ctx.shadowColor = '#90e0ef';
+  ctx.shadowBlur = 8;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // Y axis label
+  ctx.save();
+  ctx.translate(10, (H - PAD.t - PAD.b) / 2 + PAD.t);
+  ctx.rotate(-Math.PI / 2);
+  ctx.font = '9px Share Tech Mono, monospace';
+  ctx.fillStyle = '#3a5a78';
+  ctx.textAlign = 'center';
+  ctx.fillText('DEPTH (m)', 0, 0);
+  ctx.restore();
+
+  // Update meta
+  const maxDepth = Math.max(...SIM_PROFILE.map(p => p.d));
+  const durMin   = Math.floor(maxT / 60);
+  const durSec   = Math.floor(maxT % 60);
+  meta.textContent = 'MAX ' + maxDepth.toFixed(1) + 'm · ' + durMin + ':' + String(durSec).padStart(2,'0');
+  tEnd.textContent = durMin + ':' + String(durSec).padStart(2,'0');
+}
+
+// Graph only records on SEND DEPTH — no passive polling needed
+
+</script>
+</body>
+</html>
