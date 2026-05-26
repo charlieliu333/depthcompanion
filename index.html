@@ -205,7 +205,7 @@
 </head>
 <body>
 
-<div class="header"><div class="logo"><span class="logo-dive">DIVE</span><span class="logo-computer">COMPUTER</span><span class="logo-companion">COMPANION</span></div></div>
+<div class="header" onclick="onLogoClick()"><div class="logo"><span class="logo-dive">DIVE</span><span class="logo-computer">COMPUTER</span><span class="logo-companion">COMPANION</span></div></div>
 
 <div class="ble-bar">
   <div class="dot" id="dot"></div>
@@ -426,6 +426,32 @@
     <div class="logs-title">Dive Log</div>
     <div style="display:flex;gap:8px;align-items:center;">
       <span style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--muted);" id="diveCount">0 dives</span>
+    </div>
+  </div>
+
+  <div class="card" id="summaryCard" style="display:none;">
+    <div class="card-title">Session Summary</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div class="dive-stat-cell">
+        <div class="dive-stat-label">TOTAL DIVES</div>
+        <div class="dive-stat-val" id="sumDives">—</div>
+        <div class="dive-stat-unit">dives</div>
+      </div>
+      <div class="dive-stat-cell">
+        <div class="dive-stat-label">BOTTOM TIME</div>
+        <div class="dive-stat-val" id="sumBottomTime">—</div>
+        <div class="dive-stat-unit">total</div>
+      </div>
+      <div class="dive-stat-cell">
+        <div class="dive-stat-label">MAX DEPTH</div>
+        <div class="dive-stat-val" id="sumMaxDepth">—</div>
+        <div class="dive-stat-unit">metres</div>
+      </div>
+      <div class="dive-stat-cell">
+        <div class="dive-stat-label">LONGEST DIVE</div>
+        <div class="dive-stat-val" id="sumLongest">—</div>
+        <div class="dive-stat-unit">mm:ss</div>
+      </div>
     </div>
   </div>
 
@@ -888,6 +914,7 @@ function renderDiveList() {
   const list  = document.getElementById('diveList');
   const empty = document.getElementById('diveEmpty');
   document.getElementById('diveCount').textContent = dives.length + ' dive' + (dives.length!==1?'s':'');
+  renderSummary();
 
   if (!dives.length) {
     list.innerHTML=''; list.appendChild(empty); return;
@@ -1336,6 +1363,62 @@ function drawSimProfile() {
 }
 
 // Graph only records on SEND DEPTH — no passive polling needed
+
+// ── Session summary (Logs tab) ────────────────────────────────────
+function renderSummary() {
+  const card = document.getElementById('summaryCard');
+  if (!dives.length) { card.style.display = 'none'; return; }
+  card.style.display = '';
+  const totalSec   = dives.reduce((s,d) => s + d.durationSec, 0);
+  const maxDepth   = Math.max(...dives.map(d => d.maxDepth));
+  const longestSec = Math.max(...dives.map(d => d.durationSec));
+  document.getElementById('sumDives').textContent      = dives.length;
+  document.getElementById('sumBottomTime').textContent = fmtTotal(totalSec);
+  document.getElementById('sumMaxDepth').textContent   = maxDepth.toFixed(1);
+  document.getElementById('sumLongest').textContent    = fmtDuration(longestSec);
+}
+
+function fmtTotal(sec) {
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  if (h > 0) return h + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+}
+
+// ── Advanced mode (logo tap sequence) ────────────────────────────
+let advancedMode    = localStorage.getItem('dch_advanced_mode') === 'true';
+let logoClickCount  = 0;
+let logoClickLast   = 0;
+
+function onLogoClick() {
+  const now = Date.now();
+  if (now - logoClickLast > 3000) logoClickCount = 0;
+  logoClickLast = now;
+  if (++logoClickCount >= 7) {
+    logoClickCount = 0;
+    setAdvancedMode(!advancedMode);
+  }
+}
+
+function setAdvancedMode(enabled) {
+  advancedMode = enabled;
+  localStorage.setItem('dch_advanced_mode', enabled);
+  const simBtn = document.getElementById('tab-btn-sim');
+  simBtn.style.display = enabled ? '' : 'none';
+  if (!enabled && document.getElementById('panel-sim').classList.contains('active')) {
+    switchTab('logs');
+  }
+  // Subtle feedback: brief header background flash + quiet toast
+  const hdr = document.querySelector('.header');
+  hdr.style.transition = 'background .15s';
+  hdr.style.background = enabled ? 'rgba(144,224,239,0.07)' : 'rgba(255,208,96,0.05)';
+  setTimeout(() => { hdr.style.background = ''; setTimeout(() => hdr.style.transition = '', 300); }, 350);
+  toast(enabled ? 'ADV MODE ON' : 'ADV MODE OFF', '');
+}
+
+// Apply on page load
+(function () { if (!advancedMode) document.getElementById('tab-btn-sim').style.display = 'none'; })();
 
 </script>
 </body>
