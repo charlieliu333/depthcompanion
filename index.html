@@ -490,6 +490,7 @@
     </div>
 
     <button class="btn btn-cyan btn-block" onclick="downloadDive()">↓ DOWNLOAD CSV</button>
+    <button class="btn btn-red btn-block" onclick="deleteDive()">✕ DELETE DIVE</button>
 
   </div>
 </div>
@@ -560,7 +561,7 @@ async function toggleBLE() {
     document.getElementById('nameInput').value = dName;
 
     // Sync time then request full status (GF, depth, fw version etc.)
-    await syncTime();
+    await syncTime(true); // always use wall-clock on auto-connect
     await send('STATUS');
     startLiveData();
     dbgLog('ok', 'CONNECTED — ' + dName);
@@ -701,9 +702,8 @@ function syncPresetHighlight() {
 }
 
 // ── SETTINGS — Time ──────────────────────────────────────────────
-async function syncTime() {
-  // Use whatever is in the manual input, else use current local time
-  const raw = document.getElementById('timeInput').value;
+async function syncTime(forceNow = false) {
+  const raw = forceNow ? '' : document.getElementById('timeInput').value;
   const now=new Date(), pad=n=>String(n).padStart(2,'0');
   const ts = raw || (pad(now.getHours())+':'+pad(now.getMinutes())+':'+pad(now.getSeconds()));
   const ok = await send('TIME:'+ts);
@@ -1073,6 +1073,17 @@ function downloadDive() {
   a.download = `dive_${String(d.num).padStart(3,'0')}_${d.mode}.csv`;
   a.click();
   toast('DOWNLOADED','success');
+}
+
+function deleteDive() {
+  if (!viewingDive) return;
+  const idx = dives.indexOf(viewingDive);
+  if (idx === -1) return;
+  dives.splice(idx, 1);
+  dives.forEach((d, i) => d.num = i + 1);
+  closeDetail();
+  renderDiveList();
+  toast('DIVE DELETED', '');
 }
 
 // ── Helpers ───────────────────────────────────────────────────────
